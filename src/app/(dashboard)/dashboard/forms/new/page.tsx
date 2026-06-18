@@ -55,7 +55,7 @@ export default function NewFormPage() {
       name: `field_${fields.length + 1}`,
       required: false,
       placeholder: "",
-      options: (type === 'select' || type === 'radio') ? ['Option 1', 'Option 2'] : undefined
+      options: (type === 'select' || type === 'radio') ? ['Option 1', 'Option 2'] : []
     };
     setFields([...fields, newField]);
   };
@@ -82,33 +82,39 @@ export default function NewFormPage() {
     setIsSaving(true);
     const slug = title.toLowerCase().replace(/ /g, "-").replace(/[^\w-]/g, "") + "-" + Math.random().toString(36).substring(2, 6);
     
-    const formData = {
-      userId: user.uid,
-      title: title || "Untitled Form",
-      description: description || "",
-      slug,
-      fields,
-      published: false,
-      views: 0,
-      responsesCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+const cleanFields = fields.map((field) => ({
+  ...field,
+  placeholder: field.placeholder || "",
+  options: field.options || [],
+}));
 
-    console.log("Initiating form creation in Firestore...");
-    console.log("Collection: forms");
-    console.log("Payload:", formData);
+const formData = {
+  userId: user.uid,
+  title: title || "Untitled Form",
+  description: description || "",
+  slug,
+  fields: cleanFields,
+  published: false,
+  views: 0,
+  responsesCount: 0,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString()
+};
+
+    console.log("[Form Create] Initiating form creation in Firestore...");
+    console.log("[Form Create] Target Collection: forms");
+    console.log("[Form Create] Payload data:", formData);
 
     const formsCollection = collection(db, "forms");
 
     addDoc(formsCollection, formData)
       .then((docRef) => {
-        console.log("Form saved successfully! ID:", docRef.id);
+        console.log(`[Form Create] Form saved successfully! Document ID: ${docRef.id}`);
         toast({ title: "Success", description: "Form draft saved." });
         router.push("/dashboard/forms");
       })
       .catch(async (error) => {
-        console.error("Firestore addDoc failure:", error);
+        console.error("[Form Create] Firestore addDoc failure:", error);
         
         const permissionError = new FirestorePermissionError({
           path: formsCollection.path,

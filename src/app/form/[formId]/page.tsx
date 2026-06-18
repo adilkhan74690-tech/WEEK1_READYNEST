@@ -34,24 +34,30 @@ export default function PublicFormPage({ params }: { params: Promise<{ formId: s
     if (!db || !formId) return;
     
     const fetchForm = async () => {
+      console.log(`[Form Fetch] Starting load for Form ID: ${formId}`);
       try {
         const docRef = doc(db, "forms", formId);
         const docSnap = await getDoc(docRef);
+        console.log(`[Form Fetch] Snapshot exists for ${formId}:`, docSnap.exists());
         
         if (docSnap.exists()) {
           const data = docSnap.data();
+          console.log("[Form Fetch] Retrieved data:", data);
           if (data.published) {
             setForm({ id: docSnap.id, ...data });
+            console.log(`[Form Fetch] Form is published. Initiating silent view count increment.`);
             // Increment views silently in background
-            updateDoc(docRef, { views: increment(1) });
+            updateDoc(docRef, { views: increment(1) })
+              .then(() => console.log("[Form Fetch] View count incremented successfully."))
+              .catch((err) => console.error("[Form Fetch] Failed to increment view count:", err));
           } else {
-            console.warn("Form is not published.");
+            console.warn(`[Form Fetch] Form ${formId} exists but is not published.`);
           }
         } else {
-          console.error("Form not found in Firestore.");
+          console.error(`[Form Fetch] Form ${formId} not found in Firestore.`);
         }
       } catch (error) {
-        console.error("Error loading form:", error);
+        console.error(`[Form Fetch] Error loading form ${formId}:`, error);
       } finally {
         setLoading(false);
       }
@@ -62,23 +68,36 @@ export default function PublicFormPage({ params }: { params: Promise<{ formId: s
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db || !form) return;
+    if (!db || !form) {
+      console.warn("[Form Submit] Submit blocked: database or form definition not loaded.");
+      return;
+    }
     
     setIsSubmitting(true);
+    console.log(`[Form Submit] Starting submission for Form ID: ${form.id}`);
+    console.log("[Form Submit] Answers payload:", answers);
+    
     try {
-      await addDoc(collection(db, "responses"), {
+      const responsePayload = {
         formId: form.id,
+        formOwnerId: form.userId || "",
         answers,
         submittedAt: new Date().toISOString()
-      });
+      };
+      console.log("[Form Submit] Writing to responses collection:", responsePayload);
+      const resRef = await addDoc(collection(db, "responses"), responsePayload);
+      console.log(`[Form Submit] Response written successfully. Doc ID: ${resRef.id}`);
       
+      console.log(`[Form Submit] Incrementing responsesCount on form doc: forms/${form.id}`);
       await updateDoc(doc(db, "forms", form.id), {
         responsesCount: increment(1),
         updatedAt: new Date().toISOString()
       });
+      console.log("[Form Submit] Form response count incremented successfully.");
       
       setIsSubmitted(true);
     } catch (error) {
+      console.error("[Form Submit] Critical error during submission flow:", error);
       toast({ 
         variant: "destructive", 
         title: "Submission Failed", 

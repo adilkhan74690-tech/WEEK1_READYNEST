@@ -85,12 +85,9 @@ export default function LandingPage() {
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
             </Button>
-            <Button variant="outline" size="lg" className="h-12 px-8 text-base">
-              View Demo
-            </Button>
           </div>
         </section>
-
+            
         <section id="features" className="bg-secondary/30 py-24 px-6 border-y">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">

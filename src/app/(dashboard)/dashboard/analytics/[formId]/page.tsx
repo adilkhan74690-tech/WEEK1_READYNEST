@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
-import { useFirestore } from "@/firebase";
+import { useFirestore, useUser } from "@/firebase";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { 
   AreaChart, 
@@ -33,13 +33,15 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogTrigger 
+  DialogTrigger,
+  DialogDescription
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
 export default function FormAnalyticsPage({ params }: { params: Promise<{ formId: string }> }) {
   const { formId } = use(params);
   const db = useFirestore();
+  const { user } = useUser();
   const router = useRouter();
   const { toast } = useToast();
   
@@ -48,27 +50,41 @@ export default function FormAnalyticsPage({ params }: { params: Promise<{ formId
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!db || !formId) return;
+    if (!db || !formId || !user) return;
 
     const fetchData = async () => {
+      console.log(`[Analytics Fetch] Starting fetch for Form ID: ${formId}, User UID: ${user.uid}`);
       try {
+        console.log(`[Analytics Fetch] Fetching form definition: forms/${formId}`);
         const formDoc = await getDoc(doc(db, "forms", formId));
+        console.log("[Analytics Fetch] Form snapshot exists:", formDoc.exists());
         if (formDoc.exists()) {
-          setForm({ id: formDoc.id, ...formDoc.data() });
+          const formData = formDoc.data();
+          console.log("[Analytics Fetch] Form data:", formData);
+          setForm({ id: formDoc.id, ...formData });
+        } else {
+          console.error(`[Analytics Fetch] Form definition forms/${formId} not found.`);
         }
 
-        const q = query(collection(db, "responses"), where("formId", "==", formId));
+        console.log(`[Analytics Fetch] Querying responses with formOwnerId == ${user.uid} and formId == ${formId}`);
+        const q = query(
+          collection(db, "responses"), 
+          where("formOwnerId", "==", user.uid),
+          where("formId", "==", formId)
+        );
         const snapshot = await getDocs(q);
-        setResponses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const fetchedResponses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log(`[Analytics Fetch] Retrieved ${fetchedResponses.length} responses.`);
+        setResponses(fetchedResponses);
       } catch (error) {
-        console.error("Error fetching analytics data:", error);
+        console.error("[Analytics Fetch] Error fetching analytics data:", error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [formId, db]);
+  }, [formId, db, user]);
 
   const copyLink = () => {
     const url = `${window.location.origin}/form/${formId}`;

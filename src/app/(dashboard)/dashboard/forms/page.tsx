@@ -46,13 +46,15 @@ export default function MyFormsPage() {
   const fetchForms = useCallback(async () => {
     if (!user || !db) return;
     setLoading(true);
+    console.log(`[Forms Fetch] Querying forms for User UID: ${user.uid}`);
     try {
       const q = query(collection(db, "forms"), where("userId", "==", user.uid));
       const snapshot = await getDocs(q);
       const fetchedForms = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      console.log(`[Forms Fetch] Retrieved ${fetchedForms.length} forms successfully:`, fetchedForms);
       setForms(fetchedForms);
     } catch (error: any) {
-      console.error("Error fetching forms:", error);
+      console.error("[Forms Fetch] Error fetching forms:", error);
       toast({ variant: "destructive", title: "Fetch Error", description: error.message });
     } finally {
       setLoading(false);
@@ -67,16 +69,20 @@ export default function MyFormsPage() {
     if (!db) return;
     const formRef = doc(db, "forms", form.id);
     const newStatus = !form.published;
+    
+    console.log(`[Forms Publish] Toggling publish state for Form ID: ${form.id} to: ${newStatus}`);
 
     updateDoc(formRef, {
       published: newStatus,
       updatedAt: new Date().toISOString()
     })
     .then(() => {
+      console.log(`[Forms Publish] Form ${form.id} publish status updated to ${newStatus}`);
       toast({ title: newStatus ? "Published" : "Drafted", description: `Your form is now ${newStatus ? 'live' : 'private'}.` });
       fetchForms();
     })
     .catch(async (error) => {
+      console.error(`[Forms Publish] Failed to update publish status for Form ${form.id}:`, error);
       const permissionError = new FirestorePermissionError({
         path: formRef.path,
         operation: 'update',
@@ -114,13 +120,16 @@ export default function MyFormsPage() {
     if (!confirm("Are you sure you want to delete this form? This cannot be undone.")) return;
     
     const formRef = doc(db, "forms", id);
+    console.log(`[Forms Delete] Deleting form doc: forms/${id}`);
 
     deleteDoc(formRef)
       .then(() => {
+        console.log(`[Forms Delete] Form doc forms/${id} successfully deleted.`);
         toast({ title: "Deleted", description: "Form removed successfully." });
         setForms(prev => prev.filter(f => f.id !== id));
       })
       .catch(async (error) => {
+        console.error(`[Forms Delete] Failed to delete form forms/${id}:`, error);
         const permissionError = new FirestorePermissionError({
           path: formRef.path,
           operation: 'delete'
