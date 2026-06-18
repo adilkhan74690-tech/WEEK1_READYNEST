@@ -1,0 +1,63 @@
+
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information stored upon registration.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique Firebase Auth UID." },
+        "name": { "type": "string", "description": "The user's full name." },
+        "email": { "type": "string", "format": "email", "description": "The user's email address." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the user account was created in the database." }
+      },
+      "required": ["uid", "name", "email"]
+    },
+    "Form": {
+      "title": "Form",
+      "description": "A dynamic form created by a user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The UID of the owner." },
+        "title": { "type": "string", "description": "The title of the form." },
+        "description": { "type": "string", "description": "A brief description of the form." },
+        "slug": { "type": "string", "description": "The unique URL slug for the public form." },
+        "fields": { "type": "array", "description": "The JSON array of form field definitions." },
+        "published": { "type": "boolean", "description": "Whether the form is publicly accessible." },
+        "views": { "type": "number", "description": "Count of how many times the form was viewed." },
+        "responsesCount": { "type": "number", "description": "Total number of submissions received." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "slug", "fields"]
+    },
+    "Response": {
+      "title": "Response",
+      "description": "A single submission for a form.",
+      "type": "object",
+      "properties": {
+        "formId": { "type": "string", "description": "The ID of the parent form." },
+        "answers": { "type": "object", "description": "Key-value pairs of form field names and user answers." },
+        "submittedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["formId", "answers", "submittedAt"]
+    }
+  },
+  "auth": {
+    "providers": ["email"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/backend/entities/User" },
+      "description": "User profile documents."
+    },
+    "/forms/{formId}": {
+      "schema": { "$ref": "#/backend/entities/Form" },
+      "description": "Form definition documents."
+    },
+    "/responses/{responseId}": {
+      "schema": { "$ref": "#/backend/entities/Response" },
+      "description": "Form response documents."
+    }
+  }
+}
